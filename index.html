@@ -3,53 +3,139 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>💈 Barber Pro</title>
+<title>💈 Barber Pro Company</title>
+
 <style>
-body{font-family:Arial;background:#111;color:#fff;margin:0;padding:20px}
-.card{background:#222;padding:15px;border-radius:12px;margin-top:10px}
-input{width:100%;padding:10px;margin:5px 0;border-radius:8px;border:none}
-button{padding:10px;width:100%;margin-top:5px;border:none;border-radius:8px;background:#d4af37;font-weight:bold}
+body{
+font-family:Arial;
+background:#0a0a0a;
+color:#fff;
+margin:0;
+padding:20px;
+}
+
+h2{
+text-align:center;
+color:#d4af37;
+}
+
+.card{
+background:#1c1c1c;
+padding:15px;
+border-radius:12px;
+margin-top:12px;
+}
+
+input, select{
+width:100%;
+padding:10px;
+margin-top:8px;
+border-radius:8px;
+border:none;
+}
+
+button{
+width:100%;
+padding:12px;
+margin-top:8px;
+border:none;
+border-radius:8px;
+background:#d4af37;
+font-weight:bold;
+}
+
+.item{
+background:#222;
+padding:10px;
+border-radius:8px;
+margin-top:8px;
+}
 </style>
 </head>
+
 <body>
 
-<h2>💈 Barber Pro</h2>
+<h2>💈 Barber Pro - Company System</h2>
 
 <div class="card">
+<h3>📅 حجز موعد</h3>
+<input id="name" placeholder="اسم العميل">
 <input id="phone" placeholder="رقم الجوال">
-<button onclick="search()">بحث</button>
+
+<select id="time">
+<option>10:00</option>
+<option>11:00</option>
+<option>12:00</option>
+<option>1:00</option>
+<option>2:00</option>
+<option>3:00</option>
+<option>4:00</option>
+<option>5:00</option>
+</select>
+
+<button onclick="book()">حجز</button>
 </div>
 
-<div id="result"></div>
+<div class="card">
+<h3>📋 المواعيد</h3>
+<div id="list"></div>
+</div>
 
-<script>
-let data = JSON.parse(localStorage.getItem("customers") || "{}");
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-function save(){
-localStorage.setItem("customers", JSON.stringify(data));
-}
+const firebaseConfig = {
+  apiKey: "AIzaSyA9gisGE9DccYqIbhoyTTOasYxlLXaKQVs",
+  authDomain: "barber-cx.firebaseapp.com",
+  projectId: "barber-cx",
+  storageBucket: "barber-cx.firebasestorage.app",
+  messagingSenderId: "61145672161",
+  appId: "1:61145672161:web:a0e3d107f177ae68d9caa0"
+};
 
-function search(){
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window.book = async function(){
+let name = document.getElementById("name").value;
 let phone = document.getElementById("phone").value;
-if(!data[phone]) data[phone] = {visits:0};
-show(phone);
+let time = document.getElementById("time").value;
+
+if(!name || !phone || !time){
+alert("اكمل البيانات");
+return;
 }
 
-function show(phone){
-let c = data[phone];
-document.getElementById("result").innerHTML = `
-<div class='card'>
-<p>📞 ${phone}</p>
-<p>⭐ الزيارات: ${c.visits}</p>
-<button onclick="add('${phone}')">+1 زيارة</button>
+await addDoc(collection(db, "bookings"), {
+name:name,
+phone:phone,
+time:time,
+created:Date.now()
+});
+
+alert("تم الحجز 💈");
+load();
+}
+
+async function load(){
+let querySnapshot = await getDocs(collection(db, "bookings"));
+let html = "";
+
+querySnapshot.forEach(doc=>{
+let d = doc.data();
+html += `
+<div class="item">
+<b>${d.name}</b><br>
+📞 ${d.phone}<br>
+⏰ ${d.time}
 </div>`;
+});
+
+document.getElementById("list").innerHTML = html;
 }
 
-function add(phone){
-data[phone].visits++;
-save();
-show(phone);
-}
+load();
 </script>
 
 </body>
