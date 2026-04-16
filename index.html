@@ -81,7 +81,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING + VISITS FIXED SYSTEM
+// 💈 BOOKING (FIXED VISITS)
 //
 window.book = async function(){
 
@@ -102,7 +102,7 @@ if(cleanPhone.startsWith("0")){
 cleanPhone = "966" + cleanPhone.substring(1);
 }
 
-// 👤 العميل
+// 👤 جلب العميل
 let customerRef = doc(db,"customers",cleanPhone);
 let customerSnap = await getDoc(customerRef);
 
@@ -116,11 +116,11 @@ visits = customerSnap.data().visits || 0;
 // ➕ زيادة زيارة
 visits = visits + 1;
 
-// 🎁 إذا وصلت 5 = مجانية ثم إعادة العد
+// 🎁 مجانية عند 5
 if(visits === 5){
 free = true;
 alert("🎉 مبروك! هذه الزيارة مجانية 💈");
-visits = 0; // إعادة الدورة
+visits = 0;
 }
 
 // 💾 حفظ العميل
@@ -131,6 +131,10 @@ visits,
 freeVisits: (customerSnap.data()?.freeVisits || 0) + (free ? 1 : 0),
 lastVisit: date + " " + time
 });
+
+// 🔥 إعادة قراءة البيانات بعد الحفظ (حل المشكلة نهائياً)
+let updatedSnap = await getDoc(customerRef);
+let updatedVisits = updatedSnap.data().visits;
 
 // 📅 حفظ الحجز
 await addDoc(collection(db,"bookings"),{
@@ -158,7 +162,7 @@ let msg = free ?
 📅 ${date}
 ⏰ ${time}
 
-👤 عدد زياراتك: ${visits}/5
+👤 عدد زياراتك: ${updatedVisits}/5
 
 ننتظرك 👍`;
 
@@ -177,7 +181,7 @@ load();
 };
 
 //
-// 🔍 SEARCH CUSTOMER
+// 🔍 SEARCH
 //
 window.searchCustomer = async function(){
 
@@ -223,7 +227,7 @@ load();
 };
 
 //
-// 📋 LOAD + SORT (NEWEST FIRST)
+// 📋 LOAD (NEWEST FIRST)
 //
 async function load(){
 
@@ -236,7 +240,6 @@ snap.forEach(d=>{
 arr.push({id:d.id, ...d.data()});
 });
 
-// 🔥 ترتيب الأحدث أولاً
 arr.sort((a,b)=> b.created - a.created);
 
 let html="";
