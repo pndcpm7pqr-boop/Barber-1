@@ -20,6 +20,7 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 
 <h2>💈 نظام الحلاقة الاحترافي</h2>
 
+<!-- 🔍 SEARCH -->
 <div class="card">
 <h3>🔍 بحث عن عميل</h3>
 <input id="searchPhone" placeholder="9665xxxxxxx">
@@ -27,6 +28,7 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <div id="result"></div>
 </div>
 
+<!-- 🛍️ SERVICES -->
 <div class="card">
 <h3>🛍️ الخدمات</h3>
 <select id="service">
@@ -42,6 +44,7 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 </select>
 </div>
 
+<!-- 📅 BOOKING -->
 <div class="card">
 <h3>📅 حجز خدمة</h3>
 <input id="name" placeholder="اسم العميل">
@@ -52,11 +55,13 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <button onclick="book()">حجز الخدمة</button>
 </div>
 
+<!-- 📊 STATS -->
 <div class="card">
 <h3>📊 إجمالي الدخل</h3>
 <div id="stats"></div>
 </div>
 
+<!-- 📋 BOOKINGS -->
 <div class="card">
 <h3>📋 الحجوزات</h3>
 <div id="list"></div>
@@ -76,7 +81,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING (1 → 5 cycle FIXED)
+// 💈 BOOKING
 //
 window.book = async function(){
 
@@ -106,22 +111,14 @@ if(customerSnap.exists()){
 visits = customerSnap.data().visits || 0;
 }
 
-// ➕ زيادة زيارة
 visits = visits + 1;
 
-// 🎁 الزيارة الخامسة مجانية
 if(visits === 5){
 free = true;
-alert("🎉 مبروك! الخدمة علينا مجاناً 💈");
-visits = 5; // نخليها 5 مو 0
+alert("🎉 مبروك! هذه الزيارة مجانية 💈");
+visits = 0;
 }
 
-// 🔁 إعادة الدورة بعد الخامسة
-if(visits > 5){
-visits = 1;
-}
-
-// 💾 حفظ العميل
 await setDoc(customerRef,{
 name,
 phone:cleanPhone,
@@ -133,7 +130,6 @@ lastVisit: date + " " + time
 let updatedSnap = await getDoc(customerRef);
 let updatedVisits = updatedSnap.data().visits;
 
-// 📅 حفظ الحجز
 await addDoc(collection(db,"bookings"),{
 name,
 phone:cleanPhone,
@@ -146,7 +142,7 @@ visits: updatedVisits
 });
 
 //
-// 💈 WhatsApp message
+// 💈 WhatsApp message (ONLY EDITED HERE)
 //
 let msg;
 
@@ -190,15 +186,49 @@ load();
 };
 
 //
-// باقي الكود (بحث + عرض + حذف) بدون تغيير
+// 🔍 SEARCH
 //
-window.searchCustomer = async function(){ /* نفس السابق */ };
+window.searchCustomer = async function(){
 
+let phone = document.getElementById("searchPhone").value.trim();
+let result = document.getElementById("result");
+
+let cleanPhone = phone.replace(/\D/g,"");
+if(cleanPhone.startsWith("0")){
+cleanPhone = "966" + cleanPhone.substring(1);
+}
+
+let snap = await getDoc(doc(db,"customers",cleanPhone));
+
+if(!snap.exists()){
+result.innerHTML = "❌ لا يوجد عميل";
+return;
+}
+
+let d = snap.data();
+
+result.innerHTML = `
+<div class="item">
+<b>👤 ${d.name}</b><br>
+📞 ${d.phone}<br>
+👤 الزيارات: ${d.visits}/5<br>
+🎁 مجانية: ${d.freeVisits || 0}<br>
+📅 آخر زيارة: ${d.lastVisit || "لا يوجد"}
+</div>
+`;
+};
+
+//
+// 🗑️ DELETE
+//
 window.del = async function(id){
 await deleteDoc(doc(db,"bookings",id));
 load();
 };
 
+//
+// 📋 LOAD
+//
 async function load(){
 
 let snap = await getDocs(collection(db,"bookings"));
