@@ -81,7 +81,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING SYSTEM
+// 💈 BOOKING + VISITS
 //
 window.book = async function(){
 
@@ -113,7 +113,6 @@ visits = customerSnap.data().visits || 0;
 
 visits = visits + 1;
 
-// 🎁 الزيارة الخامسة مجانية
 if(visits === 5){
 free = true;
 alert("🎉 مبروك! هذه الزيارة مجانية 💈");
@@ -139,7 +138,7 @@ time,
 service:service.options[service.selectedIndex].text,
 price:Number(service.value),
 created:Date.now(),
-visits: updatedVisits // 👈 إضافة الزيارات داخل الحجز
+visits: updatedVisits
 });
 
 //
@@ -216,7 +215,7 @@ result.innerHTML = `
 <b>👤 ${d.name}</b><br>
 📞 ${d.phone}<br>
 👤 الزيارات: ${d.visits}/5<br>
-🎁 المجانية: ${d.freeVisits || 0}<br>
+🎁 مجانية: ${d.freeVisits || 0}<br>
 📅 آخر زيارة: ${d.lastVisit || "لا يوجد"}
 </div>
 `;
@@ -231,7 +230,7 @@ load();
 };
 
 //
-// 📋 LOAD BOOKINGS (NEWEST FIRST + VISITS SHOWN)
+// 📋 LOAD (WITH WHATSAPP BUTTON RESTORED)
 //
 async function load(){
 
@@ -251,6 +250,14 @@ let html="";
 arr.forEach(o=>{
 total += Number(o.price || 0);
 
+let waMsg = `مرحبا ${o.name} 💈
+تم تأكيد حجزك:
+🛍️ ${o.service}
+📅 ${o.date}
+⏰ ${o.time}`;
+
+let waUrl = `https://wa.me/${o.phone}?text=${encodeURIComponent(waMsg)}`;
+
 html += `
 <div class="item">
 <b>${o.name}</b><br>
@@ -258,6 +265,10 @@ html += `
 🛍️ ${o.service}<br>
 📅 ${o.date} ⏰ ${o.time}<br>
 👤 عدد الزيارات: ${o.visits ?? 0}/5<br>
+
+<a href="${waUrl}" target="_blank">
+<button>📲 واتساب</button>
+</a>
 
 <button onclick="del('${o.id}')">🗑️ حذف</button>
 </div>`;
