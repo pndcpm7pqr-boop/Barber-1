@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>💈 Barber Store + WhatsApp</title>
+<title>💈 Barber Store System</title>
 
 <style>
 body{font-family:Arial;background:#0a0a0a;color:#fff;margin:0;padding:20px}
@@ -18,13 +18,15 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 
 <body>
 
+<!-- LOGIN -->
 <div id="login">
-<h2>🔐 دخول المتجر</h2>
-<input id="u" placeholder="user">
-<input id="p" type="password" placeholder="pass">
+<h2>🔐 دخول النظام</h2>
+<input id="u" placeholder="اسم المستخدم">
+<input id="p" type="password" placeholder="كلمة المرور">
 <button onclick="login()">دخول</button>
 </div>
 
+<!-- APP -->
 <div id="app" style="display:none">
 
 <h2>💈 Barber Store</h2>
@@ -41,7 +43,7 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <div class="card">
 <h3>📅 حجز خدمة</h3>
 <input id="name" placeholder="اسم العميل">
-<input id="phone" placeholder="رقم الجوال (مثال 9665xxxxxxx)">
+<input id="phone" placeholder="رقم الجوال (9665xxxxxxx)">
 <input type="date" id="date">
 
 <select id="time">
@@ -59,7 +61,7 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 </div>
 
 <div class="card">
-<h3>📊 لوحة المتجر</h3>
+<h3>📊 لوحة التحكم</h3>
 <div id="stats"></div>
 </div>
 
@@ -83,20 +85,28 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// login
-window.login=function(){
-if(u.value=="admin" && p.value=="1234"){
-login.style.display="none";
-app.style.display="block";
-load();
-}else alert("خطأ في الدخول");
-}
+//
+// 🔐 LOGIN (FIXED)
+//
+window.login = function(){
+let user = document.getElementById("u").value.trim();
+let pass = document.getElementById("p").value.trim();
 
-// book
+if(user === "admin" && pass === "1234"){
+document.getElementById("login").style.display="none";
+document.getElementById("app").style.display="block";
+load();
+}else{
+alert("❌ اسم المستخدم أو كلمة المرور خطأ");
+}
+};
+
+//
+// 📅 BOOKING
+//
 window.book = async function(){
 
 let service = document.getElementById("service");
-let price = service.value;
 
 await addDoc(collection(db,"orders"),{
 name:name.value,
@@ -104,20 +114,24 @@ phone:phone.value,
 date:date.value,
 time:time.value,
 service:service.options[service.selectedIndex].text,
-price:Number(price),
+price:Number(service.value),
 created:Date.now()
 });
 
 load();
-}
+};
 
-// delete
+//
+// 🗑️ DELETE
+//
 window.del = async function(id){
 await deleteDoc(doc(db,"orders",id));
 load();
-}
+};
 
-// load
+//
+// 📋 LOAD DATA
+//
 async function load(){
 let snap = await getDocs(collection(db,"orders"));
 
@@ -133,7 +147,7 @@ let html="";
 arr.forEach(o=>{
 total += o.price;
 
-// 💈 رسالة واتساب جاهزة
+// 💈 WhatsApp message
 let msg = `مرحبا ${o.name} 💈
 تم تأكيد حجزك:
 🛍️ ${o.service}
@@ -152,7 +166,7 @@ html += `
 📅 ${o.date} ⏰ ${o.time}<br>
 
 <a href="${waUrl}" target="_blank">
-<button>📲 إرسال واتساب</button>
+<button>📲 واتساب</button>
 </a>
 
 <button onclick="del('${o.id}')">🗑️ حذف</button>
@@ -160,7 +174,7 @@ html += `
 });
 
 list.innerHTML = html;
-stats.innerHTML = "إجمالي الدخل: " + total + " SAR";
+stats.innerHTML = "💰 إجمالي الدخل: " + total + " SAR";
 }
 
 load();
