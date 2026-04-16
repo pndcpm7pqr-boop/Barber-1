@@ -20,16 +20,31 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 
 <h2>💈 نظام الحلاقة الاحترافي</h2>
 
+<!-- 🔍 SEARCH -->
+<div class="card">
+<h3>🔍 بحث عن عميل</h3>
+<input id="searchPhone" placeholder="9665xxxxxxx">
+<button onclick="searchCustomer()">بحث</button>
+<div id="result"></div>
+</div>
+
+<!-- 🛍️ SERVICES -->
 <div class="card">
 <h3>🛍️ الخدمات</h3>
 <select id="service">
-<option value="50">حلاقة شعر - 50 ريال</option>
-<option value="30">تهذيب لحية - 30 ريال</option>
-<option value="80">باقة VIP - 80 ريال</option>
-<option value="100">تنظيف بشرة - 100 ريال</option>
+
+<option value="40">✂️ حلاقة شعر عادية - 40 ريال</option>
+<option value="60">🧔‍♂️ حلاقة + لحية - 60 ريال</option>
+<option value="30">🧔 تهذيب لحية - 30 ريال</option>
+<option value="80">💈 باقة VIP - 80 ريال</option>
+<option value="100">🧼 تنظيف بشرة - 100 ريال</option>
+<option value="50">💇‍♂️ أطفال - 50 ريال</option>
+<option value="120">🔥 باقة عريس VIP - 120 ريال</option>
+
 </select>
 </div>
 
+<!-- 📅 BOOKING -->
 <div class="card">
 <h3>📅 حجز خدمة</h3>
 <input id="name" placeholder="اسم العميل">
@@ -64,7 +79,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING + LOYALTY SYSTEM
+// 💈 BOOKING + VISITS + LOYALTY
 //
 window.book = async function(){
 
@@ -85,7 +100,7 @@ if(cleanPhone.startsWith("0")){
 cleanPhone = "966" + cleanPhone.substring(1);
 }
 
-// 👤 جلب العميل
+// 👤 العميل (ID ثابت)
 let customerRef = doc(db,"customers",cleanPhone);
 let customerSnap = await getDoc(customerRef);
 
@@ -96,11 +111,11 @@ if(customerSnap.exists()){
 visits = (customerSnap.data().visits || 0) + 1;
 }
 
-// 🎁 نظام المكافأة (كل 5 زيارات)
+// 🎁 كل 5 زيارات = مجانية
 if(visits === 5){
 free = true;
-alert("🎉 مبروك! حصل العميل على خدمة مجانية 💈");
 visits = 0;
+alert("🎉 مبروك! خدمة مجانية 💈");
 }
 
 // 💾 حفظ العميل
@@ -131,10 +146,8 @@ msg = `🎉 مبروك ${name} 💈
 
 هذه الزيارة علينا مجاناً 🎁
 
-🪒 لقد أكملت 5 زيارات معنا
-✨ استمتع بالخدمة المجانية اليوم
-
-ننتظرك في الموعد ❤️`;
+لقد أكملت 5 زيارات معنا
+استمتع بالخدمة المجانية ❤️`;
 }else{
 msg = `مرحبا ${name} 💈
 تم تأكيد حجزك:
@@ -145,14 +158,13 @@ msg = `مرحبا ${name} 💈
 
 👤 عدد زياراتك: ${visits}
 
-ننتظرك في الموعد 👍`;
+ننتظرك 👍`;
 }
 
 let waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
 
-alert("✅ تم الحجز بنجاح 💈\nاضغط موافق للانتقال للواتساب");
-
-window.open(waUrl, "_blank");
+alert("تم الحجز 💈");
+window.open(waUrl,"_blank");
 
 // تنظيف
 document.getElementById("name").value="";
@@ -161,6 +173,44 @@ document.getElementById("date").value="";
 document.getElementById("time").value="";
 
 load();
+};
+
+//
+// 🔍 SEARCH CUSTOMER
+//
+window.searchCustomer = async function(){
+
+let phone = document.getElementById("searchPhone").value.trim();
+let result = document.getElementById("result");
+
+if(!phone){
+alert("اكتب رقم");
+return;
+}
+
+let cleanPhone = phone.replace(/\D/g,"");
+if(cleanPhone.startsWith("0")){
+cleanPhone = "966" + cleanPhone.substring(1);
+}
+
+let snap = await getDoc(doc(db,"customers",cleanPhone));
+
+if(!snap.exists()){
+result.innerHTML = "❌ لا يوجد عميل";
+return;
+}
+
+let d = snap.data();
+
+result.innerHTML = `
+<div class="item">
+<b>👤 ${d.name}</b><br>
+📞 ${d.phone}<br>
+👤 الزيارات: ${d.visits}<br>
+🎁 مجانية: ${d.freeVisits || 0}<br>
+📅 آخر زيارة: ${d.lastVisit || "لا يوجد"}
+</div>
+`;
 };
 
 //
