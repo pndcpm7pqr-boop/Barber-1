@@ -81,7 +81,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING (FIXED VISITS)
+// 💈 BOOKING SYSTEM
 //
 window.book = async function(){
 
@@ -96,13 +96,11 @@ alert("اكمل البيانات");
 return;
 }
 
-// 🔥 تنظيف الرقم
 let cleanPhone = phone.replace(/\D/g,"");
 if(cleanPhone.startsWith("0")){
 cleanPhone = "966" + cleanPhone.substring(1);
 }
 
-// 👤 جلب العميل
 let customerRef = doc(db,"customers",cleanPhone);
 let customerSnap = await getDoc(customerRef);
 
@@ -113,17 +111,15 @@ if(customerSnap.exists()){
 visits = customerSnap.data().visits || 0;
 }
 
-// ➕ زيادة زيارة
 visits = visits + 1;
 
-// 🎁 مجانية عند 5
+// 🎁 الزيارة الخامسة مجانية
 if(visits === 5){
 free = true;
 alert("🎉 مبروك! هذه الزيارة مجانية 💈");
 visits = 0;
 }
 
-// 💾 حفظ العميل
 await setDoc(customerRef,{
 name,
 phone:cleanPhone,
@@ -132,11 +128,9 @@ freeVisits: (customerSnap.data()?.freeVisits || 0) + (free ? 1 : 0),
 lastVisit: date + " " + time
 });
 
-// 🔥 إعادة قراءة البيانات بعد الحفظ (حل المشكلة نهائياً)
 let updatedSnap = await getDoc(customerRef);
 let updatedVisits = updatedSnap.data().visits;
 
-// 📅 حفظ الحجز
 await addDoc(collection(db,"bookings"),{
 name,
 phone:cleanPhone,
@@ -144,34 +138,49 @@ date,
 time,
 service:service.options[service.selectedIndex].text,
 price:Number(service.value),
-created:Date.now()
+created:Date.now(),
+visits: updatedVisits // 👈 إضافة الزيارات داخل الحجز
 });
 
-// 💈 رسالة واتساب
-let msg = free ?
-`🎉 مبروك ${name} 💈
+//
+// 💈 WhatsApp message (ONLY 5TH VISIT SPECIAL)
+//
+let msg;
 
-هذه الزيارة علينا مجاناً 🎁
+if(free){
 
-لقد أكملت 5 زيارات معنا ❤️` :
+msg = `💈━━━━━━━━━━━━━━━💈
+🎉 مبروك ${name}
+🏆 نظام الولاء
 
-`مرحبا ${name} 💈
-تم تأكيد حجزك:
+🔥 لقد ربحت حلاقة مجانية
 
-🛍️ ${service.options[service.selectedIndex].text}
-📅 ${date}
-⏰ ${time}
+🎁 الخدمة علينا مجاناً
 
-👤 عدد زياراتك: ${updatedVisits}/5
+💈 شكراً لثقتك بنا
+💈━━━━━━━━━━━━━━━💈`;
 
-ننتظرك 👍`;
+} else {
+
+msg = `💈━━━━━━━━━━━━━━━💈
+مرحبا ${name}
+
+🛍️ الخدمة: ${service.options[service.selectedIndex].text}
+📅 التاريخ: ${date}
+⏰ الوقت: ${time}
+
+👤 عدد الزيارات: ${updatedVisits}/5
+
+💈 ننتظرك بكل حب
+💈━━━━━━━━━━━━━━━💈`;
+
+}
 
 let waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
 
 alert("تم الحجز 💈");
 window.open(waUrl,"_blank");
 
-// تنظيف
 document.getElementById("name").value="";
 document.getElementById("phone").value="";
 document.getElementById("date").value="";
@@ -187,11 +196,6 @@ window.searchCustomer = async function(){
 
 let phone = document.getElementById("searchPhone").value.trim();
 let result = document.getElementById("result");
-
-if(!phone){
-alert("اكتب رقم");
-return;
-}
 
 let cleanPhone = phone.replace(/\D/g,"");
 if(cleanPhone.startsWith("0")){
@@ -212,7 +216,7 @@ result.innerHTML = `
 <b>👤 ${d.name}</b><br>
 📞 ${d.phone}<br>
 👤 الزيارات: ${d.visits}/5<br>
-🎁 مجانية: ${d.freeVisits || 0}<br>
+🎁 المجانية: ${d.freeVisits || 0}<br>
 📅 آخر زيارة: ${d.lastVisit || "لا يوجد"}
 </div>
 `;
@@ -227,7 +231,7 @@ load();
 };
 
 //
-// 📋 LOAD (NEWEST FIRST)
+// 📋 LOAD BOOKINGS (NEWEST FIRST + VISITS SHOWN)
 //
 async function load(){
 
@@ -247,24 +251,13 @@ let html="";
 arr.forEach(o=>{
 total += Number(o.price || 0);
 
-let waUrl = `https://wa.me/${o.phone}?text=${encodeURIComponent(
-`مرحبا ${o.name} 💈
-تم تأكيد حجزك:
-🛍️ ${o.service}
-📅 ${o.date}
-⏰ ${o.time}`
-)}`;
-
 html += `
 <div class="item">
 <b>${o.name}</b><br>
 📞 ${o.phone}<br>
 🛍️ ${o.service}<br>
 📅 ${o.date} ⏰ ${o.time}<br>
-
-<a href="${waUrl}" target="_blank">
-<button>📲 واتساب</button>
-</a>
+👤 عدد الزيارات: ${o.visits ?? 0}/5<br>
 
 <button onclick="del('${o.id}')">🗑️ حذف</button>
 </div>`;
