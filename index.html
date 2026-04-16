@@ -81,7 +81,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING + VISITS + LOYALTY
+// 💈 BOOKING + VISITS FIXED SYSTEM
 //
 window.book = async function(){
 
@@ -102,22 +102,25 @@ if(cleanPhone.startsWith("0")){
 cleanPhone = "966" + cleanPhone.substring(1);
 }
 
-// 👤 العميل (ID ثابت)
+// 👤 العميل
 let customerRef = doc(db,"customers",cleanPhone);
 let customerSnap = await getDoc(customerRef);
 
-let visits = 1;
+let visits = 0;
 let free = false;
 
 if(customerSnap.exists()){
-visits = (customerSnap.data().visits || 0) + 1;
+visits = customerSnap.data().visits || 0;
 }
 
-// 🎁 مكافأة كل 5 زيارات
+// ➕ زيادة زيارة
+visits = visits + 1;
+
+// 🎁 إذا وصلت 5 = مجانية ثم إعادة العد
 if(visits === 5){
 free = true;
-visits = 0;
-alert("🎉 مبروك! خدمة مجانية 💈");
+alert("🎉 مبروك! هذه الزيارة مجانية 💈");
+visits = 0; // إعادة الدورة
 }
 
 // 💾 حفظ العميل
@@ -155,7 +158,7 @@ let msg = free ?
 📅 ${date}
 ⏰ ${time}
 
-👤 عدد زياراتك: ${visits}
+👤 عدد زياراتك: ${visits}/5
 
 ننتظرك 👍`;
 
@@ -204,7 +207,7 @@ result.innerHTML = `
 <div class="item">
 <b>👤 ${d.name}</b><br>
 📞 ${d.phone}<br>
-👤 الزيارات: ${d.visits}<br>
+👤 الزيارات: ${d.visits}/5<br>
 🎁 مجانية: ${d.freeVisits || 0}<br>
 📅 آخر زيارة: ${d.lastVisit || "لا يوجد"}
 </div>
