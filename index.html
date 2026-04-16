@@ -78,7 +78,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING + VISITS SYSTEM
+// 💈 BOOKING + VISITS
 //
 window.book = async function(){
 
@@ -106,13 +106,13 @@ let visits = customerSnap.exists() ? (customerSnap.data().visits || 0) : 0;
 visits++;
 let free = false;
 
-// 🎁 الزيارة الخامسة مجانية
+// 🎁 الزيارة الخامسة
 if(visits === 5){
 free = true;
-alert("🎉 مبروك! هذه الزيارة مجانية 💈");
+alert("🎉 مبروك! الخدمة علينا مجاناً 💈");
 }
 
-// 🔁 إعادة الدورة بعد الخامسة
+// 🔁 إعادة الدورة
 if(visits > 5){
 visits = 1;
 }
@@ -128,7 +128,9 @@ lastVisit: date + " " + time
 
 let updatedVisits = visits;
 
+//
 // 📅 حفظ الحجز
+//
 await addDoc(collection(db,"bookings"),{
 name,
 phone:cleanPhone,
@@ -181,7 +183,7 @@ load();
 };
 
 //
-// 📋 LOAD + WHATSAPP BUTTON
+// 📋 LOAD + WHATSAPP FIX (DATE + TIME RESTORED)
 //
 async function load(){
 
@@ -205,10 +207,18 @@ let msg;
 
 if(o.visits === 5){
 msg = `💈🎉 مبروك ${o.name}
-الخدمة علينا مجاناً 🎁`;
+
+🏆 الخدمة علينا مجاناً 🎁
+
+📅 ${o.date}
+⏰ ${o.time}`;
 }else{
 msg = `💈مرحبا ${o.name}
+
 🛍️ ${o.service}
+📅 ${o.date}
+⏰ ${o.time}
+
 👤 زياراتك: ${o.visits}/5`;
 }
 
