@@ -18,18 +18,7 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 
 <body>
 
-<!-- LOGIN -->
-<div id="login">
-<h2>🔐 دخول النظام</h2>
-<input id="u" placeholder="اسم المستخدم">
-<input id="p" type="password" placeholder="كلمة المرور">
-<button onclick="login()">دخول</button>
-</div>
-
-<!-- APP -->
-<div id="app" style="display:none">
-
-<h2>💈 Barber Store</h2>
+<h2>💈 Barber Store System</h2>
 
 <div class="card">
 <h3>🛍️ الخدمات</h3>
@@ -43,7 +32,7 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <div class="card">
 <h3>📅 حجز خدمة</h3>
 <input id="name" placeholder="اسم العميل">
-<input id="phone" placeholder="رقم الجوال (9665xxxxxxx)">
+<input id="phone" placeholder="9665xxxxxxx">
 <input type="date" id="date">
 
 <select id="time">
@@ -61,15 +50,13 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 </div>
 
 <div class="card">
-<h3>📊 لوحة التحكم</h3>
+<h3>📊 إجمالي الدخل</h3>
 <div id="stats"></div>
 </div>
 
 <div class="card">
 <h3>📋 الحجوزات</h3>
 <div id="list"></div>
-</div>
-
 </div>
 
 <script type="module">
@@ -86,33 +73,27 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 🔐 LOGIN (FIXED)
-//
-window.login = function(){
-let user = document.getElementById("u").value.trim();
-let pass = document.getElementById("p").value.trim();
-
-if(user === "admin" && pass === "1234"){
-document.getElementById("login").style.display="none";
-document.getElementById("app").style.display="block";
-load();
-}else{
-alert("❌ اسم المستخدم أو كلمة المرور خطأ");
-}
-};
-
-//
 // 📅 BOOKING
 //
 window.book = async function(){
 
+let name = document.getElementById("name").value.trim();
+let phone = document.getElementById("phone").value.trim();
+let date = document.getElementById("date").value;
+let time = document.getElementById("time").value;
+
 let service = document.getElementById("service");
 
-await addDoc(collection(db,"orders"),{
-name:name.value,
-phone:phone.value,
-date:date.value,
-time:time.value,
+if(!name || !phone || !date || !time){
+alert("اكمل البيانات");
+return;
+}
+
+await addDoc(collection(db,"bookings"),{
+name,
+phone,
+date,
+time,
 service:service.options[service.selectedIndex].text,
 price:Number(service.value),
 created:Date.now()
@@ -125,15 +106,15 @@ load();
 // 🗑️ DELETE
 //
 window.del = async function(id){
-await deleteDoc(doc(db,"orders",id));
+await deleteDoc(doc(db,"bookings",id));
 load();
 };
 
 //
-// 📋 LOAD DATA
+// 📋 LOAD DATA (FIXED)
 //
 async function load(){
-let snap = await getDocs(collection(db,"orders"));
+let snap = await getDocs(collection(db,"bookings"));
 
 let arr=[];
 let total=0;
@@ -145,9 +126,9 @@ arr.push({id:d.id,...d.data()});
 let html="";
 
 arr.forEach(o=>{
-total += o.price;
+total += Number(o.price || 0);
 
-// 💈 WhatsApp message
+// WhatsApp
 let msg = `مرحبا ${o.name} 💈
 تم تأكيد حجزك:
 🛍️ ${o.service}
@@ -155,14 +136,14 @@ let msg = `مرحبا ${o.name} 💈
 ⏰ ${o.time}
 ننتظرك في الموعد 👍`;
 
-let phone = o.phone.replace("+","");
+let phone = (o.phone || "").replace("+","");
 let waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
 html += `
 <div class="item">
 <b>${o.name}</b><br>
+📞 ${o.phone}<br>
 🛍️ ${o.service}<br>
-💰 <span class="price">${o.price} SAR</span><br>
 📅 ${o.date} ⏰ ${o.time}<br>
 
 <a href="${waUrl}" target="_blank">
@@ -173,8 +154,8 @@ html += `
 </div>`;
 });
 
-list.innerHTML = html;
-stats.innerHTML = "💰 إجمالي الدخل: " + total + " SAR";
+document.getElementById("list").innerHTML = html;
+document.getElementById("stats").innerHTML = total + " SAR";
 }
 
 load();
