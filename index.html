@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>💈 Barber Store System</title>
+<title>💈 نظام الحلاق الاحترافي</title>
 
 <style>
 body{font-family:Arial;background:#0a0a0a;color:#fff;margin:0;padding:20px}
@@ -18,33 +18,26 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 
 <body>
 
-<h2>💈 Barber Store System</h2>
+<h2>💈 نظام الحلاقة الاحترافي</h2>
 
 <div class="card">
 <h3>🛍️ الخدمات</h3>
 <select id="service">
-<option value="50">Haircut - 50 SAR</option>
-<option value="30">Beard Trim - 30 SAR</option>
-<option value="80">VIP Package - 80 SAR</option>
+<option value="50">حلاقة شعر - 50 ريال</option>
+<option value="30">تهذيب لحية - 30 ريال</option>
+<option value="80">باقة VIP كاملة - 80 ريال</option>
+<option value="100">تنظيف بشرة - 100 ريال</option>
 </select>
 </div>
 
 <div class="card">
-<h3>📅 حجز خدمة</h3>
+<h3>📅 بيانات الحجز</h3>
 <input id="name" placeholder="اسم العميل">
 <input id="phone" placeholder="رقم الجوال 05xxxxxxxx">
 <input type="date" id="date">
 
-<select id="time">
-<option>10:00</option>
-<option>11:00</option>
-<option>12:00</option>
-<option>1:00</option>
-<option>2:00</option>
-<option>3:00</option>
-<option>4:00</option>
-<option>5:00</option>
-</select>
+<!-- ⏰ وقت احترافي (ساعة + دقيقة) -->
+<input type="time" id="time">
 
 <button onclick="book()">حجز الخدمة</button>
 </div>
@@ -73,7 +66,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 📅 BOOKING + CONFIRMATION + WHATSAPP FIX
+// 📅 BOOKING
 //
 window.book = async function(){
 
@@ -100,13 +93,12 @@ price:Number(service.value),
 created:Date.now()
 });
 
-// ✅ رسالة تأكيد فورية
 alert("✅ تم الحجز بنجاح 💈");
 
-// تفريغ الحقول
 document.getElementById("name").value="";
 document.getElementById("phone").value="";
 document.getElementById("date").value="";
+document.getElementById("time").value="";
 
 load();
 
@@ -124,7 +116,7 @@ load();
 };
 
 //
-// 📋 LOAD DATA + WHATSAPP FIX
+// 📋 LOAD
 //
 async function load(){
 let snap = await getDocs(collection(db,"bookings"));
@@ -141,7 +133,6 @@ let html="";
 arr.forEach(o=>{
 total += Number(o.price || 0);
 
-// 💈 WhatsApp FIX
 let msg = `مرحبا ${o.name} 💈
 تم تأكيد حجزك:
 🛍️ ${o.service}
@@ -149,7 +140,6 @@ let msg = `مرحبا ${o.name} 💈
 ⏰ ${o.time}
 ننتظرك في الموعد 👍`;
 
-// تنظيف الرقم وتحويله تلقائي
 let rawPhone = (o.phone || "").replace(/\D/g,"");
 
 if(rawPhone.startsWith("0")){
@@ -174,7 +164,7 @@ html += `
 });
 
 document.getElementById("list").innerHTML = html;
-document.getElementById("stats").innerHTML = total + " SAR";
+document.getElementById("stats").innerHTML = total + " ريال";
 }
 
 load();
