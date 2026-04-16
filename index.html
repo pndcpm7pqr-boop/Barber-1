@@ -19,7 +19,6 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 
 <h2>💈 نظام الحلاقة الاحترافي</h2>
 
-<!-- 🔍 SEARCH -->
 <div class="card">
 <h3>🔍 بحث عن عميل</h3>
 <input id="searchPhone" placeholder="9665xxxxxxx">
@@ -27,7 +26,6 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <div id="result"></div>
 </div>
 
-<!-- 🛍️ SERVICES (UPDATED ONLY) -->
 <div class="card">
 <h3>🛍️ الخدمات</h3>
 <select id="service">
@@ -40,7 +38,6 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 </select>
 </div>
 
-<!-- 📅 BOOKING -->
 <div class="card">
 <h3>📅 حجز خدمة</h3>
 <input id="name" placeholder="اسم العميل">
@@ -51,13 +48,11 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <button onclick="book()">حجز الخدمة</button>
 </div>
 
-<!-- 📊 STATS -->
 <div class="card">
 <h3>📊 إجمالي الدخل</h3>
 <div id="stats"></div>
 </div>
 
-<!-- 📋 BOOKINGS -->
 <div class="card">
 <h3>📋 الحجوزات</h3>
 <div id="list"></div>
@@ -76,9 +71,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-//
-// 💈 BOOKING SYSTEM (UNCHANGED)
-//
 window.book = async function(){
 
 let name = document.getElementById("name").value.trim();
@@ -122,8 +114,6 @@ freeVisits: (customerSnap.data()?.freeVisits || 0) + (free ? 1 : 0),
 lastVisit: date + " " + time
 });
 
-let updatedVisits = visits;
-
 await addDoc(collection(db,"bookings"),{
 name,
 phone:cleanPhone,
@@ -132,15 +122,12 @@ time,
 service:service.options[service.selectedIndex].text,
 price:Number(service.value),
 created:Date.now(),
-visits: updatedVisits
+visits
 });
 
 load();
 };
 
-//
-// 🔍 SEARCH (UNCHANGED)
-//
 window.searchCustomer = async function(){
 
 let phone = document.getElementById("searchPhone").value.trim();
@@ -167,17 +154,11 @@ document.getElementById("result").innerHTML = `
 </div>`;
 };
 
-//
-// 🗑️ DELETE (UNCHANGED)
-//
 window.del = async function(id){
 await deleteDoc(doc(db,"bookings",id));
 load();
 };
 
-//
-// 📋 LOAD (UNCHANGED)
-//
 async function load(){
 
 let snap = await getDocs(collection(db,"bookings"));
@@ -197,8 +178,14 @@ arr.forEach(o=>{
 total += Number(o.price || 0);
 
 let msg = (o.visits === 5)
-? `💈🎉 مبروك ${o.name} - الخدمة علينا مجاناً 🎁`
-: `💈مرحبا ${o.name} - 🛍️ ${o.service} - 👤 ${o.visits}/5`;
+? `💈🎉 مبروك ${o.name} - الخدمة علينا مجاناً 🎁
+📅 ${o.date}
+⏰ ${o.time}`
+: `💈مرحبا ${o.name}
+🛍️ ${o.service}
+📅 ${o.date}
+⏰ ${o.time}
+👤 ${o.visits}/5`;
 
 let waUrl = `https://wa.me/${o.phone}?text=${encodeURIComponent(msg)}`;
 
