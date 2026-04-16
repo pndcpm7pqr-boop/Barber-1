@@ -78,7 +78,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING SYSTEM (1→5 cycle)
+// 💈 BOOKING + VISITS SYSTEM
 //
 window.book = async function(){
 
@@ -104,15 +104,15 @@ let customerSnap = await getDoc(customerRef);
 let visits = customerSnap.exists() ? (customerSnap.data().visits || 0) : 0;
 
 visits++;
+let free = false;
 
 // 🎁 الزيارة الخامسة مجانية
-let free = false;
 if(visits === 5){
 free = true;
-alert("🎉 مبروك! الخدمة علينا مجاناً 💈");
+alert("🎉 مبروك! هذه الزيارة مجانية 💈");
 }
 
-// 🔁 إعادة الدورة
+// 🔁 إعادة الدورة بعد الخامسة
 if(visits > 5){
 visits = 1;
 }
@@ -139,30 +139,6 @@ price:Number(service.value),
 created:Date.now(),
 visits: updatedVisits
 });
-
-//
-// 💈 WhatsApp
-//
-let msg;
-
-if(free){
-msg = `💈🎉 مبروك ${name}
-الخدمة علينا مجاناً 🎁`;
-}else{
-msg = `💈مرحبا ${name}
-🛍️ ${service.options[service.selectedIndex].text}
-👤 زياراتك: ${updatedVisits}/5`;
-}
-
-let waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
-
-window.open(waUrl,"_blank");
-alert("تم الحجز 💈");
-
-document.getElementById("name").value="";
-document.getElementById("phone").value="";
-document.getElementById("date").value="";
-document.getElementById("time").value="";
 
 load();
 };
@@ -205,7 +181,7 @@ load();
 };
 
 //
-// 📋 LOAD
+// 📋 LOAD + WHATSAPP BUTTON
 //
 async function load(){
 
@@ -225,6 +201,19 @@ let html="";
 arr.forEach(o=>{
 total += Number(o.price || 0);
 
+let msg;
+
+if(o.visits === 5){
+msg = `💈🎉 مبروك ${o.name}
+الخدمة علينا مجاناً 🎁`;
+}else{
+msg = `💈مرحبا ${o.name}
+🛍️ ${o.service}
+👤 زياراتك: ${o.visits}/5`;
+}
+
+let waUrl = `https://wa.me/${o.phone}?text=${encodeURIComponent(msg)}`;
+
 html += `
 <div class="item">
 <b>${o.name}</b><br>
@@ -232,6 +221,10 @@ html += `
 🛍️ ${o.service}<br>
 📅 ${o.date} ⏰ ${o.time}<br>
 👤 زيارات: ${o.visits}/5<br>
+
+<a href="${waUrl}" target="_blank">
+<button>📲 واتساب</button>
+</a>
 
 <button onclick="del('${o.id}')">🗑️ حذف</button>
 </div>`;
