@@ -12,7 +12,6 @@ h2{text-align:center;color:#d4af37}
 input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none}
 button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;border-radius:8px}
 .item{background:#222;padding:10px;margin-top:8px;border-radius:8px}
-.price{color:#00ff99}
 .vip{color:#ffd700}
 </style>
 </head>
@@ -27,7 +26,6 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <option value="50">حلاقة شعر - 50 ريال</option>
 <option value="30">تهذيب لحية - 30 ريال</option>
 <option value="80">باقة VIP - 80 ريال</option>
-<option value="100">تنظيف بشرة - 100 ريال</option>
 </select>
 </div>
 
@@ -53,7 +51,7 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA9gisGE9DccYqIbhoyTTOasYxlLXaKQVs",
@@ -65,7 +63,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 📅 BOOKING + VISITS SYSTEM
+// 📅 BOOKING + FIX VISITS
 //
 window.book = async function(){
 
@@ -91,23 +89,29 @@ price:Number(service.value),
 created:Date.now()
 });
 
-// 2️⃣ تحديث العملاء (عدد الزيارات)
-let q = query(collection(db,"customers"), where("phone","==",phone));
-let snap = await getDocs(q);
+// 2️⃣ إصلاح الزيارات (بـ ID ثابت = رقم الجوال)
+let cleanPhone = phone.replace(/\D/g,"");
 
-if(snap.empty){
-await addDoc(collection(db,"customers"),{
+if(cleanPhone.startsWith("0")){
+cleanPhone = "966" + cleanPhone.substring(1);
+}
+
+let customerRef = doc(db,"customers",cleanPhone);
+let customerSnap = await getDoc(customerRef);
+
+if(customerSnap.exists()){
+let visits = customerSnap.data().visits || 0;
+
+await setDoc(customerRef,{
 name,
-phone,
-visits:1
+phone:cleanPhone,
+visits:visits + 1
 });
 }else{
-snap.forEach(async (d)=>{
-let newVisits = (d.data().visits || 0) + 1;
-await updateDoc(doc(db,"customers",d.id),{
-visits:newVisits,
-name
-});
+await setDoc(customerRef,{
+name,
+phone:cleanPhone,
+visits:1
 });
 }
 
@@ -130,7 +134,7 @@ load();
 };
 
 //
-// 📋 LOAD DATA + WHATSAPP + VISITS
+// 📋 LOAD
 //
 async function load(){
 
@@ -142,37 +146,28 @@ cSnap.forEach(c=>{
 customers[c.data().phone] = c.data().visits;
 });
 
-let arr=[];
+let html="";
 let total=0;
 
 snap.forEach(d=>{
-arr.push({id:d.id,...d.data()});
-});
-
-let html="";
-
-arr.forEach(o=>{
+let o = d.data();
 total += Number(o.price || 0);
 
-// 📊 عدد الزيارات
-let visits = customers[o.phone] || 1;
+let cleanPhone = (o.phone || "").replace(/\D/g,"");
+if(cleanPhone.startsWith("0")){
+cleanPhone = "966" + cleanPhone.substring(1);
+}
 
-// 💈 واتساب
+let visits = customers[cleanPhone] || 1;
+
 let msg = `مرحبا ${o.name} 💈
 تم تأكيد حجزك:
 🛍️ ${o.service}
 📅 ${o.date}
 ⏰ ${o.time}
-👤 عدد زياراتك: ${visits}
-ننتظرك في الموعد 👍`;
+👤 عدد زياراتك: ${visits}`;
 
-// تنظيف الرقم
-let rawPhone = (o.phone || "").replace(/\D/g,"");
-if(rawPhone.startsWith("0")){
-rawPhone = "966" + rawPhone.substring(1);
-}
-
-let waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(msg)}`;
+let waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
 
 html += `
 <div class="item">
@@ -181,13 +176,13 @@ html += `
 🛍️ ${o.service}<br>
 📅 ${o.date} ⏰ ${o.time}<br>
 
-<span class="vip">👤 عدد الزيارات: ${visits}</span><br>
+<span class="vip">👤 الزيارات: ${visits}</span><br>
 
 <a href="${waUrl}" target="_blank">
 <button>📲 واتساب</button>
 </a>
 
-<button onclick="del('${o.id}')">🗑️ حذف</button>
+<button onclick="del('${d.id}')">🗑️ حذف</button>
 </div>`;
 });
 
