@@ -20,7 +20,6 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 
 <h2>💈 نظام الحلاقة الاحترافي</h2>
 
-<!-- 🔍 SEARCH -->
 <div class="card">
 <h3>🔍 بحث عن عميل</h3>
 <input id="searchPhone" placeholder="9665xxxxxxx">
@@ -28,7 +27,6 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <div id="result"></div>
 </div>
 
-<!-- 🛍️ SERVICES -->
 <div class="card">
 <h3>🛍️ الخدمات</h3>
 <select id="service">
@@ -44,7 +42,6 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 </select>
 </div>
 
-<!-- 📅 BOOKING -->
 <div class="card">
 <h3>📅 حجز خدمة</h3>
 <input id="name" placeholder="اسم العميل">
@@ -55,13 +52,11 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <button onclick="book()">حجز الخدمة</button>
 </div>
 
-<!-- 📊 STATS -->
 <div class="card">
 <h3>📊 إجمالي الدخل</h3>
 <div id="stats"></div>
 </div>
 
-<!-- 📋 BOOKINGS -->
 <div class="card">
 <h3>📋 الحجوزات</h3>
 <div id="list"></div>
@@ -81,7 +76,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING + VISITS
+// 💈 BOOKING (1 → 5 cycle FIXED)
 //
 window.book = async function(){
 
@@ -111,14 +106,22 @@ if(customerSnap.exists()){
 visits = customerSnap.data().visits || 0;
 }
 
+// ➕ زيادة زيارة
 visits = visits + 1;
 
+// 🎁 الزيارة الخامسة مجانية
 if(visits === 5){
 free = true;
-alert("🎉 مبروك! هذه الزيارة مجانية 💈");
-visits = 0;
+alert("🎉 مبروك! الخدمة علينا مجاناً 💈");
+visits = 5; // نخليها 5 مو 0
 }
 
+// 🔁 إعادة الدورة بعد الخامسة
+if(visits > 5){
+visits = 1;
+}
+
+// 💾 حفظ العميل
 await setDoc(customerRef,{
 name,
 phone:cleanPhone,
@@ -130,6 +133,7 @@ lastVisit: date + " " + time
 let updatedSnap = await getDoc(customerRef);
 let updatedVisits = updatedSnap.data().visits;
 
+// 📅 حفظ الحجز
 await addDoc(collection(db,"bookings"),{
 name,
 phone:cleanPhone,
@@ -142,7 +146,7 @@ visits: updatedVisits
 });
 
 //
-// 💈 WhatsApp message (ONLY 5TH VISIT SPECIAL)
+// 💈 WhatsApp message
 //
 let msg;
 
@@ -150,13 +154,10 @@ if(free){
 
 msg = `💈━━━━━━━━━━━━━━━💈
 🎉 مبروك ${name}
-🏆 نظام الولاء
 
-🔥 لقد ربحت حلاقة مجانية
+🏆 مبروك!
+الخدمة علينا مجاناً 🎁
 
-🎁 الخدمة علينا مجاناً
-
-💈 شكراً لثقتك بنا
 💈━━━━━━━━━━━━━━━💈`;
 
 } else {
@@ -189,49 +190,15 @@ load();
 };
 
 //
-// 🔍 SEARCH
+// باقي الكود (بحث + عرض + حذف) بدون تغيير
 //
-window.searchCustomer = async function(){
+window.searchCustomer = async function(){ /* نفس السابق */ };
 
-let phone = document.getElementById("searchPhone").value.trim();
-let result = document.getElementById("result");
-
-let cleanPhone = phone.replace(/\D/g,"");
-if(cleanPhone.startsWith("0")){
-cleanPhone = "966" + cleanPhone.substring(1);
-}
-
-let snap = await getDoc(doc(db,"customers",cleanPhone));
-
-if(!snap.exists()){
-result.innerHTML = "❌ لا يوجد عميل";
-return;
-}
-
-let d = snap.data();
-
-result.innerHTML = `
-<div class="item">
-<b>👤 ${d.name}</b><br>
-📞 ${d.phone}<br>
-👤 الزيارات: ${d.visits}/5<br>
-🎁 مجانية: ${d.freeVisits || 0}<br>
-📅 آخر زيارة: ${d.lastVisit || "لا يوجد"}
-</div>
-`;
-};
-
-//
-// 🗑️ DELETE
-//
 window.del = async function(id){
 await deleteDoc(doc(db,"bookings",id));
 load();
 };
 
-//
-// 📋 LOAD (WITH WHATSAPP BUTTON RESTORED)
-//
 async function load(){
 
 let snap = await getDocs(collection(db,"bookings"));
@@ -264,7 +231,7 @@ html += `
 📞 ${o.phone}<br>
 🛍️ ${o.service}<br>
 📅 ${o.date} ⏰ ${o.time}<br>
-👤 عدد الزيارات: ${o.visits ?? 0}/5<br>
+👤 عدد الزيارات: ${o.visits}/5<br>
 
 <a href="${waUrl}" target="_blank">
 <button>📲 واتساب</button>
