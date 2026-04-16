@@ -12,7 +12,6 @@ h2{text-align:center;color:#d4af37}
 input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none}
 button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;border-radius:8px}
 .item{background:#222;padding:10px;margin-top:8px;border-radius:8px}
-.vip{color:#ffd700}
 </style>
 </head>
 
@@ -32,7 +31,6 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <div class="card">
 <h3>🛍️ الخدمات</h3>
 <select id="service">
-
 <option value="40">✂️ حلاقة شعر عادية - 40 ريال</option>
 <option value="60">🧔‍♂️ حلاقة + لحية - 60 ريال</option>
 <option value="30">🧔 تهذيب لحية - 30 ريال</option>
@@ -40,7 +38,6 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <option value="100">🧼 تنظيف بشرة - 100 ريال</option>
 <option value="50">💇‍♂️ أطفال - 50 ريال</option>
 <option value="120">🔥 باقة عريس VIP - 120 ريال</option>
-
 </select>
 </div>
 
@@ -81,7 +78,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING
+// 💈 BOOKING SYSTEM (1→5 cycle)
 //
 window.book = async function(){
 
@@ -104,21 +101,23 @@ cleanPhone = "966" + cleanPhone.substring(1);
 let customerRef = doc(db,"customers",cleanPhone);
 let customerSnap = await getDoc(customerRef);
 
-let visits = 0;
+let visits = customerSnap.exists() ? (customerSnap.data().visits || 0) : 0;
+
+visits++;
+
+// 🎁 الزيارة الخامسة مجانية
 let free = false;
-
-if(customerSnap.exists()){
-visits = customerSnap.data().visits || 0;
-}
-
-visits = visits + 1;
-
 if(visits === 5){
 free = true;
-alert("🎉 مبروك! هذه الزيارة مجانية 💈");
-visits = 0;
+alert("🎉 مبروك! الخدمة علينا مجاناً 💈");
 }
 
+// 🔁 إعادة الدورة
+if(visits > 5){
+visits = 1;
+}
+
+// 💾 حفظ العميل
 await setDoc(customerRef,{
 name,
 phone:cleanPhone,
@@ -127,9 +126,9 @@ freeVisits: (customerSnap.data()?.freeVisits || 0) + (free ? 1 : 0),
 lastVisit: date + " " + time
 });
 
-let updatedSnap = await getDoc(customerRef);
-let updatedVisits = updatedSnap.data().visits;
+let updatedVisits = visits;
 
+// 📅 حفظ الحجز
 await addDoc(collection(db,"bookings"),{
 name,
 phone:cleanPhone,
@@ -142,40 +141,23 @@ visits: updatedVisits
 });
 
 //
-// 💈 WhatsApp message (ONLY EDITED HERE)
+// 💈 WhatsApp
 //
 let msg;
 
 if(free){
-
-msg = `💈━━━━━━━━━━━━━━━💈
-🎉 مبروك ${name}
-
-🏆 مبروك!
-الخدمة علينا مجاناً 🎁
-
-💈━━━━━━━━━━━━━━━💈`;
-
-} else {
-
-msg = `💈━━━━━━━━━━━━━━━💈
-مرحبا ${name}
-
-🛍️ الخدمة: ${service.options[service.selectedIndex].text}
-📅 التاريخ: ${date}
-⏰ الوقت: ${time}
-
-👤 عدد الزيارات: ${updatedVisits}/5
-
-💈 ننتظرك بكل حب
-💈━━━━━━━━━━━━━━━💈`;
-
+msg = `💈🎉 مبروك ${name}
+الخدمة علينا مجاناً 🎁`;
+}else{
+msg = `💈مرحبا ${name}
+🛍️ ${service.options[service.selectedIndex].text}
+👤 زياراتك: ${updatedVisits}/5`;
 }
 
 let waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
 
-alert("تم الحجز 💈");
 window.open(waUrl,"_blank");
+alert("تم الحجز 💈");
 
 document.getElementById("name").value="";
 document.getElementById("phone").value="";
@@ -191,8 +173,6 @@ load();
 window.searchCustomer = async function(){
 
 let phone = document.getElementById("searchPhone").value.trim();
-let result = document.getElementById("result");
-
 let cleanPhone = phone.replace(/\D/g,"");
 if(cleanPhone.startsWith("0")){
 cleanPhone = "966" + cleanPhone.substring(1);
@@ -201,21 +181,19 @@ cleanPhone = "966" + cleanPhone.substring(1);
 let snap = await getDoc(doc(db,"customers",cleanPhone));
 
 if(!snap.exists()){
-result.innerHTML = "❌ لا يوجد عميل";
+document.getElementById("result").innerHTML="❌ لا يوجد عميل";
 return;
 }
 
 let d = snap.data();
 
-result.innerHTML = `
+document.getElementById("result").innerHTML = `
 <div class="item">
-<b>👤 ${d.name}</b><br>
+👤 ${d.name}<br>
 📞 ${d.phone}<br>
 👤 الزيارات: ${d.visits}/5<br>
-🎁 مجانية: ${d.freeVisits || 0}<br>
-📅 آخر زيارة: ${d.lastVisit || "لا يوجد"}
-</div>
-`;
+🎁 مجانية: ${d.freeVisits || 0}
+</div>`;
 };
 
 //
@@ -247,25 +225,13 @@ let html="";
 arr.forEach(o=>{
 total += Number(o.price || 0);
 
-let waMsg = `مرحبا ${o.name} 💈
-تم تأكيد حجزك:
-🛍️ ${o.service}
-📅 ${o.date}
-⏰ ${o.time}`;
-
-let waUrl = `https://wa.me/${o.phone}?text=${encodeURIComponent(waMsg)}`;
-
 html += `
 <div class="item">
 <b>${o.name}</b><br>
 📞 ${o.phone}<br>
 🛍️ ${o.service}<br>
 📅 ${o.date} ⏰ ${o.time}<br>
-👤 عدد الزيارات: ${o.visits}/5<br>
-
-<a href="${waUrl}" target="_blank">
-<button>📲 واتساب</button>
-</a>
+👤 زيارات: ${o.visits}/5<br>
 
 <button onclick="del('${o.id}')">🗑️ حذف</button>
 </div>`;
