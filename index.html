@@ -20,15 +20,6 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 
 <h2>💈 نظام الحلاقة الاحترافي</h2>
 
-<!-- 🔍 SEARCH -->
-<div class="card">
-<h3>🔍 بحث برقم الجوال</h3>
-<input id="searchPhone" placeholder="9665xxxxxxx">
-<button onclick="searchCustomer()">بحث</button>
-<div id="result"></div>
-</div>
-
-<!-- BOOKING -->
 <div class="card">
 <h3>🛍️ الخدمات</h3>
 <select id="service">
@@ -73,7 +64,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING (نفس النظام السابق)
+// 💈 BOOKING + LOYALTY SYSTEM
 //
 window.book = async function(){
 
@@ -88,32 +79,40 @@ alert("اكمل البيانات");
 return;
 }
 
+// 🔥 تنظيف الرقم
 let cleanPhone = phone.replace(/\D/g,"");
 if(cleanPhone.startsWith("0")){
 cleanPhone = "966" + cleanPhone.substring(1);
 }
 
+// 👤 جلب العميل
 let customerRef = doc(db,"customers",cleanPhone);
 let customerSnap = await getDoc(customerRef);
 
-if(customerSnap.exists()){
-let old = customerSnap.data();
+let visits = 1;
+let free = false;
 
-await setDoc(customerRef,{
-name,
-phone:cleanPhone,
-visits:(old.visits || 0) + 1,
-lastVisit: date + " " + time
-});
-}else{
-await setDoc(customerRef,{
-name,
-phone:cleanPhone,
-visits:1,
-lastVisit: date + " " + time
-});
+if(customerSnap.exists()){
+visits = (customerSnap.data().visits || 0) + 1;
 }
 
+// 🎁 نظام المكافأة (كل 5 زيارات)
+if(visits === 5){
+free = true;
+alert("🎉 مبروك! حصل العميل على خدمة مجانية 💈");
+visits = 0;
+}
+
+// 💾 حفظ العميل
+await setDoc(customerRef,{
+name,
+phone:cleanPhone,
+visits,
+freeVisits: (customerSnap.data()?.freeVisits || 0) + (free ? 1 : 0),
+lastVisit: date + " " + time
+});
+
+// 📅 حفظ الحجز
 await addDoc(collection(db,"bookings"),{
 name,
 phone:cleanPhone,
@@ -124,7 +123,42 @@ price:Number(service.value),
 created:Date.now()
 });
 
-alert("✅ تم الحجز 💈");
+// 💈 رسالة واتساب
+let msg = "";
+
+if(free){
+msg = `🎉 مبروك ${name} 💈
+
+هذه الزيارة علينا مجاناً 🎁
+
+🪒 لقد أكملت 5 زيارات معنا
+✨ استمتع بالخدمة المجانية اليوم
+
+ننتظرك في الموعد ❤️`;
+}else{
+msg = `مرحبا ${name} 💈
+تم تأكيد حجزك:
+
+🛍️ ${service.options[service.selectedIndex].text}
+📅 ${date}
+⏰ ${time}
+
+👤 عدد زياراتك: ${visits}
+
+ننتظرك في الموعد 👍`;
+}
+
+let waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+
+alert("✅ تم الحجز بنجاح 💈\nاضغط موافق للانتقال للواتساب");
+
+window.open(waUrl, "_blank");
+
+// تنظيف
+document.getElementById("name").value="";
+document.getElementById("phone").value="";
+document.getElementById("date").value="";
+document.getElementById("time").value="";
 
 load();
 };
@@ -138,54 +172,11 @@ load();
 };
 
 //
-// 🔍 SEARCH CUSTOMER (NEW)
-//
-window.searchCustomer = async function(){
-
-let phone = document.getElementById("searchPhone").value.trim();
-let result = document.getElementById("result");
-
-if(!phone){
-alert("اكتب رقم الجوال");
-return;
-}
-
-let cleanPhone = phone.replace(/\D/g,"");
-if(cleanPhone.startsWith("0")){
-cleanPhone = "966" + cleanPhone.substring(1);
-}
-
-let snap = await getDoc(doc(db,"customers",cleanPhone));
-
-if(!snap.exists()){
-result.innerHTML = "❌ لا يوجد عميل";
-return;
-}
-
-let data = snap.data();
-
-result.innerHTML = `
-<div class="item">
-<b>👤 ${data.name}</b><br>
-📞 ${data.phone}<br>
-👤 عدد الزيارات: ${data.visits}<br>
-📅 آخر زيارة: ${data.lastVisit || "غير موجود"}
-</div>
-`;
-};
-
-//
 // 📋 LOAD
 //
 async function load(){
 
 let snap = await getDocs(collection(db,"bookings"));
-let cSnap = await getDocs(collection(db,"customers"));
-
-let customers = {};
-cSnap.forEach(c=>{
-customers[c.id] = c.data().visits;
-});
 
 let html="";
 let total=0;
@@ -194,15 +185,12 @@ snap.forEach(d=>{
 let o = d.data();
 total += Number(o.price || 0);
 
-let visits = customers[o.phone] || 1;
-
 html += `
 <div class="item">
 <b>${o.name}</b><br>
 📞 ${o.phone}<br>
 🛍️ ${o.service}<br>
 📅 ${o.date} ⏰ ${o.time}<br>
-👤 الزيارات: ${visits}<br>
 
 <button onclick="del('${d.id}')">🗑️ حذف</button>
 </div>`;
