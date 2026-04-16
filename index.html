@@ -32,7 +32,7 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <div class="card">
 <h3>📅 حجز خدمة</h3>
 <input id="name" placeholder="اسم العميل">
-<input id="phone" placeholder="9665xxxxxxx">
+<input id="phone" placeholder="رقم الجوال 05xxxxxxxx">
 <input type="date" id="date">
 
 <select id="time">
@@ -73,7 +73,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 📅 BOOKING
+// 📅 BOOKING + CONFIRMATION + WHATSAPP FIX
 //
 window.book = async function(){
 
@@ -89,6 +89,7 @@ alert("اكمل البيانات");
 return;
 }
 
+try{
 await addDoc(collection(db,"bookings"),{
 name,
 phone,
@@ -99,7 +100,19 @@ price:Number(service.value),
 created:Date.now()
 });
 
+// ✅ رسالة تأكيد فورية
+alert("✅ تم الحجز بنجاح 💈");
+
+// تفريغ الحقول
+document.getElementById("name").value="";
+document.getElementById("phone").value="";
+document.getElementById("date").value="";
+
 load();
+
+}catch(e){
+alert("خطأ: " + e.message);
+}
 };
 
 //
@@ -111,7 +124,7 @@ load();
 };
 
 //
-// 📋 LOAD DATA (FIXED)
+// 📋 LOAD DATA + WHATSAPP FIX
 //
 async function load(){
 let snap = await getDocs(collection(db,"bookings"));
@@ -128,7 +141,7 @@ let html="";
 arr.forEach(o=>{
 total += Number(o.price || 0);
 
-// WhatsApp
+// 💈 WhatsApp FIX
 let msg = `مرحبا ${o.name} 💈
 تم تأكيد حجزك:
 🛍️ ${o.service}
@@ -136,8 +149,14 @@ let msg = `مرحبا ${o.name} 💈
 ⏰ ${o.time}
 ننتظرك في الموعد 👍`;
 
-let phone = (o.phone || "").replace("+","");
-let waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+// تنظيف الرقم وتحويله تلقائي
+let rawPhone = (o.phone || "").replace(/\D/g,"");
+
+if(rawPhone.startsWith("0")){
+rawPhone = "966" + rawPhone.substring(1);
+}
+
+let waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(msg)}`;
 
 html += `
 <div class="item">
