@@ -55,11 +55,13 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <button onclick="book()">حجز الخدمة</button>
 </div>
 
+<!-- 📊 STATS -->
 <div class="card">
 <h3>📊 إجمالي الدخل</h3>
 <div id="stats"></div>
 </div>
 
+<!-- 📋 BOOKINGS -->
 <div class="card">
 <h3>📋 الحجوزات</h3>
 <div id="list"></div>
@@ -70,7 +72,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA9gisGE9DccYQQIbhoyTTOasYxlLXaKQVs",
+  apiKey: "AIzaSyA9gisGE9DccYQYbhoyTTOasYxlLXaKQVs",
   authDomain: "barber-cx.firebaseapp.com",
   projectId: "barber-cx"
 };
@@ -79,7 +81,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 💈 BOOKING + LOYALTY SYSTEM
+// 💈 BOOKING + VISITS + LOYALTY
 //
 window.book = async function(){
 
@@ -94,11 +96,13 @@ alert("اكمل البيانات");
 return;
 }
 
+// 🔥 تنظيف الرقم
 let cleanPhone = phone.replace(/\D/g,"");
 if(cleanPhone.startsWith("0")){
 cleanPhone = "966" + cleanPhone.substring(1);
 }
 
+// 👤 العميل (ID ثابت)
 let customerRef = doc(db,"customers",cleanPhone);
 let customerSnap = await getDoc(customerRef);
 
@@ -109,12 +113,14 @@ if(customerSnap.exists()){
 visits = (customerSnap.data().visits || 0) + 1;
 }
 
+// 🎁 مكافأة كل 5 زيارات
 if(visits === 5){
 free = true;
 visits = 0;
 alert("🎉 مبروك! خدمة مجانية 💈");
 }
 
+// 💾 حفظ العميل
 await setDoc(customerRef,{
 name,
 phone:cleanPhone,
@@ -123,6 +129,7 @@ freeVisits: (customerSnap.data()?.freeVisits || 0) + (free ? 1 : 0),
 lastVisit: date + " " + time
 });
 
+// 📅 حفظ الحجز
 await addDoc(collection(db,"bookings"),{
 name,
 phone:cleanPhone,
@@ -133,7 +140,7 @@ price:Number(service.value),
 created:Date.now()
 });
 
-// واتساب بعد الحجز
+// 💈 رسالة واتساب
 let msg = free ?
 `🎉 مبروك ${name} 💈
 
@@ -148,13 +155,16 @@ let msg = free ?
 📅 ${date}
 ⏰ ${time}
 
-👤 عدد زياراتك: ${visits}`;
+👤 عدد زياراتك: ${visits}
+
+ننتظرك 👍`;
 
 let waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
 
 alert("تم الحجز 💈");
 window.open(waUrl,"_blank");
 
+// تنظيف
 document.getElementById("name").value="";
 document.getElementById("phone").value="";
 document.getElementById("date").value="";
@@ -210,17 +220,25 @@ load();
 };
 
 //
-// 📋 LOAD (WITH WHATSAPP BUTTON)
+// 📋 LOAD + SORT (NEWEST FIRST)
 //
 async function load(){
 
 let snap = await getDocs(collection(db,"bookings"));
 
-let html="";
+let arr=[];
 let total=0;
 
 snap.forEach(d=>{
-let o = d.data();
+arr.push({id:d.id, ...d.data()});
+});
+
+// 🔥 ترتيب الأحدث أولاً
+arr.sort((a,b)=> b.created - a.created);
+
+let html="";
+
+arr.forEach(o=>{
 total += Number(o.price || 0);
 
 let waUrl = `https://wa.me/${o.phone}?text=${encodeURIComponent(
@@ -242,7 +260,7 @@ html += `
 <button>📲 واتساب</button>
 </a>
 
-<button onclick="del('${d.id}')">🗑️ حذف</button>
+<button onclick="del('${o.id}')">🗑️ حذف</button>
 </div>`;
 });
 
