@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>💈 نظام الحلاق الاحترافي</title>
+<title>💈 Barber Pro System</title>
 
 <style>
 body{font-family:Arial;background:#0a0a0a;color:#fff;margin:0;padding:20px}
@@ -13,6 +13,7 @@ input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:non
 button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;border-radius:8px}
 .item{background:#222;padding:10px;margin-top:8px;border-radius:8px}
 .price{color:#00ff99}
+.vip{color:#ffd700}
 </style>
 </head>
 
@@ -25,18 +26,16 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 <select id="service">
 <option value="50">حلاقة شعر - 50 ريال</option>
 <option value="30">تهذيب لحية - 30 ريال</option>
-<option value="80">باقة VIP كاملة - 80 ريال</option>
+<option value="80">باقة VIP - 80 ريال</option>
 <option value="100">تنظيف بشرة - 100 ريال</option>
 </select>
 </div>
 
 <div class="card">
-<h3>📅 بيانات الحجز</h3>
+<h3>📅 حجز خدمة</h3>
 <input id="name" placeholder="اسم العميل">
-<input id="phone" placeholder="رقم الجوال 05xxxxxxxx">
+<input id="phone" placeholder="9665xxxxxxx">
 <input type="date" id="date">
-
-<!-- ⏰ وقت احترافي (ساعة + دقيقة) -->
 <input type="time" id="time">
 
 <button onclick="book()">حجز الخدمة</button>
@@ -54,7 +53,7 @@ button{width:100%;padding:10px;margin-top:8px;background:#d4af37;border:none;bor
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA9gisGE9DccYqIbhoyTTOasYxlLXaKQVs",
@@ -66,7 +65,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 //
-// 📅 BOOKING
+// 📅 BOOKING + VISITS SYSTEM
 //
 window.book = async function(){
 
@@ -74,7 +73,6 @@ let name = document.getElementById("name").value.trim();
 let phone = document.getElementById("phone").value.trim();
 let date = document.getElementById("date").value;
 let time = document.getElementById("time").value;
-
 let service = document.getElementById("service");
 
 if(!name || !phone || !date || !time){
@@ -82,7 +80,7 @@ alert("اكمل البيانات");
 return;
 }
 
-try{
+// 1️⃣ حفظ الحجز
 await addDoc(collection(db,"bookings"),{
 name,
 phone,
@@ -93,7 +91,27 @@ price:Number(service.value),
 created:Date.now()
 });
 
-alert("✅ تم الحجز بنجاح 💈");
+// 2️⃣ تحديث العملاء (عدد الزيارات)
+let q = query(collection(db,"customers"), where("phone","==",phone));
+let snap = await getDocs(q);
+
+if(snap.empty){
+await addDoc(collection(db,"customers"),{
+name,
+phone,
+visits:1
+});
+}else{
+snap.forEach(async (d)=>{
+let newVisits = (d.data().visits || 0) + 1;
+await updateDoc(doc(db,"customers",d.id),{
+visits:newVisits,
+name
+});
+});
+}
+
+alert("✅ تم الحجز وتسجيل الزيارة 💈");
 
 document.getElementById("name").value="";
 document.getElementById("phone").value="";
@@ -101,10 +119,6 @@ document.getElementById("date").value="";
 document.getElementById("time").value="";
 
 load();
-
-}catch(e){
-alert("خطأ: " + e.message);
-}
 };
 
 //
@@ -116,10 +130,17 @@ load();
 };
 
 //
-// 📋 LOAD
+// 📋 LOAD DATA + WHATSAPP + VISITS
 //
 async function load(){
+
 let snap = await getDocs(collection(db,"bookings"));
+let cSnap = await getDocs(collection(db,"customers"));
+
+let customers = {};
+cSnap.forEach(c=>{
+customers[c.data().phone] = c.data().visits;
+});
 
 let arr=[];
 let total=0;
@@ -133,15 +154,20 @@ let html="";
 arr.forEach(o=>{
 total += Number(o.price || 0);
 
+// 📊 عدد الزيارات
+let visits = customers[o.phone] || 1;
+
+// 💈 واتساب
 let msg = `مرحبا ${o.name} 💈
 تم تأكيد حجزك:
 🛍️ ${o.service}
 📅 ${o.date}
 ⏰ ${o.time}
+👤 عدد زياراتك: ${visits}
 ننتظرك في الموعد 👍`;
 
+// تنظيف الرقم
 let rawPhone = (o.phone || "").replace(/\D/g,"");
-
 if(rawPhone.startsWith("0")){
 rawPhone = "966" + rawPhone.substring(1);
 }
@@ -154,6 +180,8 @@ html += `
 📞 ${o.phone}<br>
 🛍️ ${o.service}<br>
 📅 ${o.date} ⏰ ${o.time}<br>
+
+<span class="vip">👤 عدد الزيارات: ${visits}</span><br>
 
 <a href="${waUrl}" target="_blank">
 <button>📲 واتساب</button>
